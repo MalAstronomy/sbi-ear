@@ -1,0 +1,19 @@
+name: eac
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - cudatoolkit=10.2.89
+  - gfortran=11.2.0
+  - jupyter=1.0.0
+  - multinest=3.10
+  - pip=21.2.4
+  - python=3.9.7
+  - pytorch=1.10.1
+  - pip:
+    - dawgz==0.3.6
+    - joblib==1.1.0
+    - lampe==0.4.6
+    - petitradtrans==2.3.6
+    - wandb==0.12.11

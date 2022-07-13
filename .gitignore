@@ -5,6 +5,13 @@
 # macOS
 .DS_Store
 
+# petitRADTRANS
+input_data.tar.gz
+input_data/
+
+# Weights & Biases
+wandb/
+
 
 ##########
 # Python #
