@@ -1,12 +1,12 @@
-# Simulation-based inference for exoplanet atmosphere characterization
+# Simulation-based inference for exoplanetary atmospheric retrieval
 
 ## Installation
 
 1. Clone the repository.
 
     ```
-    git clone https://github.com/francois-rozet/sbi-eac
-    cd sbi-eac
+    git clone https://github.com/francois-rozet/sbi-ear
+    cd sbi-ear
     ```
 
 2. Download and extract the input data of [petitRADTRANS](https://petitradtrans.readthedocs.io).
@@ -20,7 +20,7 @@
 
     ```
     conda env create -f environment.yml
-    conda activate eac
+    conda activate ear
     ```
 
 4. Rebin the opacities to a lower resolution.

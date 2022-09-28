@@ -16,7 +16,7 @@ from ees import Simulator, LOWER, UPPER
 
 
 scratch = os.environ.get('SCRATCH', '')
-path = Path(scratch) / 'eac/data'
+path = Path(scratch) / 'ear/data'
 path.mkdir(parents=True, exist_ok=True)
 
 
@@ -45,23 +45,20 @@ def aggregate():
     length = len(files)
 
     i = int(0.9 * length)
+    j = int(0.99 * length)
     splits = {
         'train': files[:i],
-        'valid': files[i:-1],
-        'test': files[-1:],
+        'valid': files[i:j],
+        'test': files[j:],
     }
-
-    def filter_large(theta, x):
-        mask = x.mean(dim=-1) < 6
-        return theta[mask], x[mask]
 
     for name, files in splits.items():
         dataset = H5Dataset(*files, batch_size=4096)
 
         H5Dataset.store(
-            starmap(filter_large, dataset),
+            dataset,
             path / f'{name}.h5',
-            size=len(dataset) // 2,
+            size=len(dataset),
         )
 
 
@@ -94,6 +91,6 @@ if __name__ == '__main__':
         prune=True,
         env=[
             'source ~/.bashrc',
-            'conda activate eac',
+            'conda activate ear',
         ]
     )

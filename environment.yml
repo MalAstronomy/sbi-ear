@@ -1,8 +1,8 @@
-name: eac
+name: ear
 channels:
   - pytorch
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
   - cudatoolkit=10.2.89
   - gfortran=11.2.0
@@ -12,8 +12,8 @@ dependencies:
   - python=3.9.7
   - pytorch=1.10.1
   - pip:
-    - dawgz==0.3.6
+    - dawgz==0.4.1
     - joblib==1.1.0
-    - lampe==0.4.6
+    - lampe==0.5.5
     - petitradtrans==2.3.6
-    - wandb==0.12.11
+    - wandb==0.13.3

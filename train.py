@@ -27,14 +27,14 @@ from ees import Simulator, LOWER, UPPER
 
 
 scratch = os.environ.get('SCRATCH', '')
-datapath = Path(scratch) / 'eac/data'
-savepath = Path(scratch) / 'eac/runs'
+datapath = Path(scratch) / 'ear/data'
+savepath = Path(scratch) / 'ear/runs'
 
 
 @job(array=3, cpus=2, gpus=1, ram='8GB', time='1-00:00:00')
 def train(i: int):
     # Run
-    run = wandb.init(project='eac')
+    run = wandb.init(project='ear')
 
     # Simulator
     simulator = Simulator(noisy=False)
@@ -51,7 +51,6 @@ def train(i: int):
         moments=((l + u) / 2, (u - l) / 2),
         transforms=3,
         build=NAF,
-        signal=16,
         hidden_features=[512] * 5,
         activation='ELU',
     )
@@ -61,8 +60,8 @@ def train(i: int):
     # Optimizer
     loss = NPELoss(estimator)
     optimizer = optim.AdamW(chain(embedding.parameters(), estimator.parameters()), lr=1e-3, weight_decay=1e-2)
-    scheduler = sched.ReduceLROnPlateau(optimizer, factor=0.5, min_lr=1e-5, patience=32, threshold=1e-2)
-    step = GDStep(optimizer, clip=1)
+    scheduler = sched.ReduceLROnPlateau(optimizer, factor=0.5, min_lr=1e-6, patience=32, threshold=1e-2, threshold_mode='abs')
+    step = GDStep(optimizer, clip=1.0)
 
     # Data
     trainset = H5Dataset(datapath / 'train.h5', batch_size=2048, shuffle=True)
@@ -75,7 +74,7 @@ def train(i: int):
         x = embedding(x)
         return loss(theta, x)
 
-    for epoch in tqdm(range(512), unit='epoch'):
+    for epoch in tqdm(range(1024), unit='epoch'):
         embedding.train(), estimator.train()
         start = time.time()
 
@@ -126,7 +125,7 @@ if __name__ == '__main__':
         backend='slurm',
         env=[
             'source ~/.bashrc',
-            'conda activate eac',
+            'conda activate ear',
             'export WANDB_SILENT=true',
         ]
     )
