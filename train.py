@@ -3,7 +3,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import random
 import time
 import torch
 import torch.nn as nn
@@ -12,7 +11,7 @@ import torch.optim.lr_scheduler as sched
 import wandb
 
 from dawgz import job, schedule
-from itertools import chain, islice
+from itertools import islice
 from pathlib import Path
 from torch import Tensor
 from tqdm import tqdm
@@ -31,6 +30,34 @@ datapath = Path(scratch) / 'ear/data'
 savepath = Path(scratch) / 'ear/runs'
 
 
+class NPEWithEmbedding(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.embedding = ResMLP(
+            379, 64,
+            hidden_features=[512] * 2 + [256] * 3 + [128] * 5,
+            activation='ELU',
+        )
+
+        l, u = torch.tensor(LOWER), torch.tensor(UPPER)
+
+        self.npe = NPE(
+            16, 64,
+            moments=((l + u) / 2, (u - l) / 2),
+            transforms=3,
+            build=NAF,
+            hidden_features=[512] * 5,
+            activation='ELU',
+        )
+
+    def forward(self, theta: Tensor, x: Tensor) -> Tensor:
+        return self.npe(theta, self.embedding(x))
+
+    def flow(self, x: Tensor):  # -> Distribution
+        return self.npe.flow(self.embedding(x))
+
+
 @job(array=3, cpus=2, gpus=1, ram='8GB', time='1-00:00:00')
 def train(i: int):
     # Run
@@ -42,40 +69,31 @@ def train(i: int):
     def noisy(x: Tensor) -> Tensor:
         return x + simulator.sigma * torch.randn_like(x)
 
-    l, u = torch.tensor(LOWER), torch.tensor(UPPER)
-
-    # Estimator
-    embedding = ResMLP(379, 64, hidden_features=[512] * 2 + [256] * 3 + [128] * 5, activation='ELU')
-    estimator = NPE(
-        16, 64,
-        moments=((l + u) / 2, (u - l) / 2),
-        transforms=3,
-        build=NAF,
-        hidden_features=[512] * 5,
-        activation='ELU',
-    )
-
-    embedding.cuda(), estimator.cuda()
-
-    # Optimizer
-    loss = NPELoss(estimator)
-    optimizer = optim.AdamW(chain(embedding.parameters(), estimator.parameters()), lr=1e-3, weight_decay=1e-2)
-    scheduler = sched.ReduceLROnPlateau(optimizer, factor=0.5, min_lr=1e-6, patience=32, threshold=1e-2, threshold_mode='abs')
-    step = GDStep(optimizer, clip=1.0)
-
     # Data
     trainset = H5Dataset(datapath / 'train.h5', batch_size=2048, shuffle=True)
     validset = H5Dataset(datapath / 'valid.h5', batch_size=2048, shuffle=True)
 
     # Training
+    estimator = NPEWithEmbedding().cuda()
+    loss = NPELoss(estimator)
+    optimizer = optim.AdamW(estimator.parameters(), lr=1e-3, weight_decay=1e-2)
+    step = GDStep(optimizer, clip=1.0)
+    scheduler = sched.ReduceLROnPlateau(
+        optimizer,
+        factor=0.5,
+        min_lr=1e-6,
+        patience=32,
+        threshold=1e-2,
+        threshold_mode='abs',
+    )
+
     def pipe(theta: Tensor, x: Tensor) -> Tensor:
         theta, x = theta.cuda(), x.cuda()
         x = noisy(x)
-        x = embedding(x)
         return loss(theta, x)
 
     for epoch in tqdm(range(1024), unit='epoch'):
-        embedding.train(), estimator.train()
+        estimator.train()
         start = time.time()
 
         losses = torch.stack([
@@ -84,7 +102,7 @@ def train(i: int):
         ]).cpu().numpy()
 
         end = time.time()
-        embedding.eval(), estimator.eval()
+        estimator.eval()
 
         with torch.no_grad():
             losses_val = torch.stack([
@@ -109,11 +127,7 @@ def train(i: int):
     runpath = savepath / run.name
     runpath.mkdir(parents=True, exist_ok=True)
 
-    torch.save({
-        'embedding': embedding.state_dict(),
-        'estimator': estimator.state_dict(),
-        'optimizer': optimizer.state_dict(),
-    }, runpath / 'states.pth')
+    torch.save(estimator.state_dict(), runpath / 'state.pth')
 
     run.finish()
 
