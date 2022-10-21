@@ -19,8 +19,9 @@ from tqdm import tqdm
 from lampe.data import H5Dataset
 from lampe.inference import NPE, NPELoss
 from lampe.nn import ResMLP
-from lampe.nn.flows import NAF
 from lampe.utils import GDStep
+
+from zuko.flows import NAF
 
 from ees import Simulator, LOWER, UPPER
 
@@ -30,14 +31,27 @@ datapath = Path(scratch) / 'ear/data'
 savepath = Path(scratch) / 'ear/runs'
 
 
+class SoftClip(nn.Module):
+    def __init__(self, bound: float = 1.0):
+        super().__init__()
+
+        self.bound = bound
+
+    def forward(self, x: Tensor) -> Tensor:
+        return x / (1 + abs(x / self.bound))
+
+
 class NPEWithEmbedding(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.embedding = ResMLP(
-            379, 64,
-            hidden_features=[512] * 2 + [256] * 3 + [128] * 5,
-            activation='ELU',
+        self.embedding = nn.Sequential(
+            SoftClip(100.0),
+            ResMLP(
+                379, 64,
+                hidden_features=[512] * 2 + [256] * 3 + [128] * 5,
+                activation=nn.ELU,
+            ),
         )
 
         l, u = torch.tensor(LOWER), torch.tensor(UPPER)
@@ -48,7 +62,7 @@ class NPEWithEmbedding(nn.Module):
             transforms=3,
             build=NAF,
             hidden_features=[512] * 5,
-            activation='ELU',
+            activation=nn.ELU,
         )
 
     def forward(self, theta: Tensor, x: Tensor) -> Tensor:

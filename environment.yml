@@ -14,6 +14,7 @@ dependencies:
   - pip:
     - dawgz==0.4.1
     - joblib==1.1.0
-    - lampe==0.5.5
+    - lampe==0.6.1
     - petitradtrans==2.3.6
     - wandb==0.13.3
+    - zuko==0.0.5
