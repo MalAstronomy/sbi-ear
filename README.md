@@ -1,5 +1,7 @@
 # Simulation-based inference for exoplanetary atmospheric retrieval
 
+This repository is the official implementation of [Neural posterior estimation for exoplanetary atmospheric retrieval](https://arxiv.org/abs/2301.06575).
+
 ## Installation
 
 1. Clone the repository.
