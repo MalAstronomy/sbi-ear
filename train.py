@@ -138,10 +138,10 @@ def train(i: int):
         if optimizer.param_groups[0]['lr'] <= scheduler.min_lrs[0]:
             break
 
-    runpath = savepath / run.name
-    runpath.mkdir(parents=True, exist_ok=True)
+        runpath = savepath / run.name
+        runpath.mkdir(parents=True, exist_ok=True)
 
-    torch.save(estimator.state_dict(), runpath / 'state.pth')
+        torch.save(estimator.state_dict(), runpath / 'state.pth')
 
     run.finish()
 
